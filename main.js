@@ -30,40 +30,83 @@ const SVG = function(pathData) {
  * @param {*} svg - An SVG Node element used as the repeating pattern
  * @param {*} target - An HTML element to repeating svg nodes
  */
-const Poster = function(svg, target) {
-  this._svg = svg;
-  this._target = target;
+//   this.setAttr = (attr, value) => {
+//     if (this.hasOwnProperty(attr)) {
+//       if (attr === "copies") {
+//       }
+//       this[attr] = value;
+//       this.render();
+//     }
+//   };
 
-  this.copies = 5;
-  this.scale = 1.1;
-  this.offsetX = 0;
-  this.offsetY = 0;
-  this.minimumSize = 0.5;
-  this.fill = true;
+//   this.render();
+// };
 
-  this.startColor = "#5CCFE6";
-  this.endColor = "#ff9c00";
+const poster = {
+  _nodes: [],
+  _svg: new SVG(peakDistrictData),
+  _copies: 5,
 
-  this._getNodes = () => {};
+  scale: 1.1,
+  offsetX: 0,
+  offsetY: 0,
+  minimumSize: 0.5,
+  fill: true,
 
-  this.render = () => {
-    for (let i = 0; i < this.copies; i++) {
-      const svgClone = this._svg.cloneNode({ deep: true });
-      svgClone.setAttribute("transform", `scale(${1 + i / 10})`);
-      this._target.appendChild(svgClone);
-    }
-  };
+  startColor: "#5CCFE6",
+  endColor: "#ff9c00",
 
-  this.setAttr = (attr, value) => {
-    if (this.hasOwnProperty(attr)) {
-      if (attr === "copies") {
+  set nodes(amount) {
+    const difference = amount - this.nodes.length;
+
+    if (difference === 0) {
+      // console.log("Same number of copies requested");
+    } else {
+      if (difference > 0) {
+        // Create additional copies
+        // e.g. 5 exist and 7 are called for
+        const target = document.querySelector(".wrapper");
+        for (let i = 0; i < difference; i++) {
+          const svgClone = this._svg.cloneNode({ deep: true });
+          target.appendChild(svgClone);
+        }
       }
-      this[attr] = value;
-      this.render();
-    }
-  };
 
-  this.render();
+      if (difference < 0) {
+        // Remove copies from end of NodeList
+        // e.g. 10 exist and 8 are called for
+        const oldNodes = this.nodes.slice(amount);
+        oldNodes.forEach(node => node.remove());
+        // Takes last 2 nodes and removes them
+      }
+
+      this.rescale();
+      this._nodes = [].slice.call(document.querySelectorAll("svg"));
+    }
+  },
+
+  get nodes() {
+    const nodes = [].slice.call(document.querySelectorAll("svg"));
+    return nodes;
+  },
+
+  set copies(value) {
+    this._copies = value;
+    this.nodes = value;
+  },
+
+  get copies() {
+    return this._copies;
+  },
+
+  // IDEA: only rescale when adding new nodes, ensure old nodes are removed in correct order
+  rescale() {
+    this.nodes.forEach((node, index) => {
+      const scaleFactor = 1 + 0.1 * index;
+      node.setAttribute("transform", `scale(${scaleFactor})`);
+      node.setAttribute("stroke-width", 1 / scaleFactor);
+    });
+  }
 };
 
 /**
@@ -107,15 +150,14 @@ const guiLog = (property, value) => {
 };
 
 window.onload = function() {
-  const wrapper = document.querySelector(".wrapper");
-  const svg = new SVG(peakDistrictData);
-  const image = new Poster(svg, wrapper);
-  const gui = initGUI(image);
+  const gui = initGUI(poster);
 
   gui.__controllers.map(controller => {
     controller.onChange(value => {
-      guiLog(controller.property, value);
-      image.setAttr(controller.property, value);
+      // guiLog(controller.property, value);
+      poster[controller.property] = value;
     });
   });
+
+  poster.nodes = poster.copies;
 };
